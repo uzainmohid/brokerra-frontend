@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <defs>
+    <!-- Main emerald gradient — top to bottom -->
+    <linearGradient id="g-main" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Subtle glow filter for the apex node -->
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="1.8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle glow for connector line -->
+    <filter id="line-glow" x="-20%" y="-80%" width="140%" height="260%">
+      <feGaussianBlur stdDeviation="0.8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background: rounded square, deep navy -->
+  <rect width="40" height="40" rx="10" fill="#0A1628"/>
+
+  <!-- Subtle inner glow at top -->
+  <rect width="40" height="40" rx="10" fill="url(#bg-glow)" opacity="0.6"/>
+  <radialGradient id="bg-glow" cx="50%" cy="0%" r="70%">
+    <stop offset="0%" stop-color="#10b981" stop-opacity="0.12"/>
+    <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+  </radialGradient>
+
+  <!-- Column 1 — shortest (left) -->
+  <rect x="5" y="22" width="8" height="12" rx="1.5" fill="url(#g-main)" opacity="0.55"/>
+
+  <!-- Column 2 — medium (center) -->
+  <rect x="16" y="15" width="8" height="19" rx="1.5" fill="url(#g-main)" opacity="0.75"/>
+
+  <!-- Column 3 — tallest (right) -->
+  <rect x="27" y="9" width="8" height="25" rx="1.5" fill="url(#g-main)"/>
+
+  <!-- Connector line: left-top → mid-top → right-top -->
+  <polyline
+    points="9,22 20,15 31,9"
+    stroke="#10b981"
+    stroke-width="1.25"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+    filter="url(#line-glow)"
+    opacity="0.9"
+  />
+
+  <!-- Node at column 1 top -->
+  <circle cx="9" cy="22" r="1.8" fill="#0A1628" stroke="#10b981" stroke-width="1.2" opacity="0.7"/>
+
+  <!-- Node at column 2 top -->
+  <circle cx="20" cy="15" r="1.8" fill="#0A1628" stroke="#10b981" stroke-width="1.2" opacity="0.85"/>
+
+  <!-- Apex node at column 3 top — full glow -->
+  <circle cx="31" cy="9" r="2.5" fill="#10b981" filter="url(#glow)"/>
+  <circle cx="31" cy="9" r="1.2" fill="#d1fae5"/>
+</svg>

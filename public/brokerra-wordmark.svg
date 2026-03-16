@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 148 32" fill="none">
+  <defs>
+    <filter id="text-glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- "Broker" -->
+  <text
+    x="0" y="23"
+    font-family="'Geist', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif"
+    font-size="24"
+    font-weight="700"
+    letter-spacing="-0.8"
+    fill="#FFFFFF"
+  >Broker</text>
+
+  <!-- "ra" in emerald with subtle glow -->
+  <text
+    x="108" y="23"
+    font-family="'Geist', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif"
+    font-size="24"
+    font-weight="700"
+    letter-spacing="-0.8"
+    fill="#10b981"
+    filter="url(#text-glow)"
+    opacity="0.25"
+  >ra</text>
+  <text
+    x="108" y="23"
+    font-family="'Geist', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif"
+    font-size="24"
+    font-weight="700"
+    letter-spacing="-0.8"
+    fill="#10b981"
+  >ra</text>
+</svg>

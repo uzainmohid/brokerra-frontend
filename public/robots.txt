@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /landing
+Allow: /login
+Allow: /register
+Allow: /start-trial
+Disallow: /dashboard
+Disallow: /leads
+Disallow: /pipeline
+Disallow: /analytics
+Disallow: /settings
+
+Sitemap: https://brokerra.in/sitemap.xml
