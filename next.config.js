@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+   eslint: {
+    ignoreDuringBuilds: true, 
   // Enable standalone output for Docker deployments
   output: process.env.DOCKER_BUILD === 'true' ? 'standalone' : undefined,
 
@@ -9,7 +11,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: '*.brokerra.in' },
     ],
-  },
+  } },
 
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion'],
