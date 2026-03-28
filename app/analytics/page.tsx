@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Header } from '@/components/layout/header'
 import { PageTransition } from '@/components/shared/page-transition'
@@ -17,9 +17,9 @@ import { SourceConversionRadar } from '@/components/analytics/source-conversion-
 import { BrokerLeaderboard } from '@/components/analytics/broker-leaderboard'
 import { ExportPanel } from '@/components/analytics/export-panel'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { analyticsApi } from '@/lib/api'
-import { AnalyticsData } from '@/types'
-import { RefreshCw, Download } from 'lucide-react'
+import { analyticsApi, leadsApi } from '@/lib/api'
+import { AnalyticsData, Lead } from '@/types'
+import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 const PERIOD_OPTIONS = [
@@ -30,23 +30,35 @@ const PERIOD_OPTIONS = [
 ]
 
 export default function AnalyticsPage() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [period, setPeriod] = useState('30d')
-  const [loading, setLoading] = useState(false)
+  const [analytics, setAnalytics]   = useState<AnalyticsData | null>(null)
+  const [leads, setLeads]           = useState<Lead[]>([])
+  const [period, setPeriod]         = useState('30d')
+  const [loading, setLoading]       = useState(false)
 
-  const fetchAnalytics = async () => {
+  const fetchAll = useCallback(async (showToast = false) => {
     setLoading(true)
     try {
-      const data = await analyticsApi.getAnalytics()
-      setAnalytics(data)
+      // Fetch analytics + raw leads in parallel — both are needed
+      const [analyticsData, leadsRes] = await Promise.allSettled([
+        analyticsApi.getAnalytics(),
+        leadsApi.getLeads({ limit: 500 }),
+      ])
+
+      if (analyticsData.status === 'fulfilled') setAnalytics(analyticsData.value)
+      if (leadsRes.status === 'fulfilled') {
+        const raw = leadsRes.value
+        const arr: Lead[] = Array.isArray(raw) ? raw : (raw.data ?? [])
+        setLeads(arr)
+      }
+      if (showToast) toast.success('Analytics refreshed')
     } catch {
-      // graceful fallback — child components use their own mock data
+      if (showToast) toast.error('Failed to refresh analytics')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchAnalytics() }, [period])
+  useEffect(() => { fetchAll() }, [fetchAll, period])
 
   return (
     <PageTransition className="flex flex-col flex-1 overflow-hidden">
@@ -55,7 +67,6 @@ export default function AnalyticsPage() {
         subtitle="Performance insights across your entire pipeline"
         action={
           <div className="flex items-center gap-2">
-            {/* Period selector */}
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue />
@@ -70,7 +81,8 @@ export default function AnalyticsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchAnalytics}
+              onClick={() => fetchAll(true)}
+              disabled={loading}
               className="gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -82,10 +94,10 @@ export default function AnalyticsPage() {
       <ScrollArea className="flex-1">
         <div className="px-8 py-6 space-y-6 pb-12">
 
-          {/* ── KPI row ──────────────────────────────────────────── */}
-          <AnalyticsKpiRow />
+          {/* ── KPI row — passes real analytics + raw leads ───────── */}
+          <AnalyticsKpiRow analytics={analytics} leads={leads} />
 
-          {/* ── Primary charts ───────────────────────────────────── */}
+          {/* ── Primary charts ────────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div className="lg:col-span-2">
               <MonthlyTrendChart data={analytics?.monthlyTrend} />
@@ -93,24 +105,25 @@ export default function AnalyticsPage() {
             <LeadSourceChart data={analytics?.leadsBySource} />
           </div>
 
-          {/* ── Secondary charts ─────────────────────────────────── */}
+          {/* ── Secondary charts ──────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <ConversionFunnelChart data={analytics?.conversionFunnel} />
             <RevenuePotentialChart />
           </div>
 
-          {/* ── Tertiary charts ──────────────────────────────────── */}
+          {/* ── Tertiary charts ───────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <LeadVelocityChart />
             <SourceConversionRadar />
-            <BrokerLeaderboard />
+            {/* Pass real analytics broker data if available */}
+            <BrokerLeaderboard brokers={analytics?.topPerformingBrokers} />
           </div>
 
-          {/* ── Activity heatmap ─────────────────────────────────── */}
+          {/* ── Activity heatmap ──────────────────────────────────── */}
           <ActivityHeatmap />
 
-          {/* ── Export panel ─────────────────────────────────────── */}
-          <ExportPanel />
+          {/* ── Export panel — passes raw leads for client-side CSV ─ */}
+          <ExportPanel leads={leads} analytics={analytics} />
 
         </div>
       </ScrollArea>

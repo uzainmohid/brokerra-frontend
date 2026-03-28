@@ -9,76 +9,181 @@ import {
 import { Button } from '@/components/ui/button'
 import { exportApi } from '@/lib/api'
 import { downloadBlob } from '@/utils'
+import { AnalyticsData, Lead } from '@/types'
+import { formatCurrency } from '@/utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-interface ExportOption {
-  id: string
-  title: string
-  description: string
-  icon: React.ElementType
-  iconColor: string
-  iconBg: string
-  action: () => Promise<void>
+interface ExportPanelProps {
+  leads?: Lead[]
+  analytics?: AnalyticsData | null
 }
 
-export function ExportPanel() {
-  const [loading, setLoading] = useState<string | null>(null)
-  const [done, setDone] = useState<string[]>([])
+// ── Client-side CSV builder (works even when backend is unreachable) ──────────
+function buildLeadsCsv(leads: Lead[]): string {
+  const headers = [
+    'Name', 'Phone', 'Email', 'Status', 'Temperature',
+    'Source', 'Budget (₹)', 'Property Type', 'Location',
+    'Next Follow-Up', 'Created At',
+  ].join(',')
 
-  const run = async (id: string, fn: () => Promise<void>) => {
+  const rows = leads.map(l => [
+    `"${l.name}"`,
+    `"${l.phone}"`,
+    `"${l.email || ''}"`,
+    `"${l.status}"`,
+    `"${l.temperature}"`,
+    `"${l.source}"`,
+    l.budget || 0,
+    `"${l.propertyType || ''}"`,
+    `"${l.location || ''}"`,
+    `"${l.nextFollowUpAt ? new Date(l.nextFollowUpAt).toLocaleDateString('en-IN') : ''}"`,
+    `"${l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN') : ''}"`,
+  ].join(','))
+
+  return [headers, ...rows].join('\n')
+}
+
+function buildPipelineCsv(leads: Lead[]): string {
+  const open = leads.filter(l => !['closed', 'lost'].includes(l.status))
+  const headers = ['Name', 'Stage', 'Temperature', 'Budget (₹)', 'Location', 'Next Follow-Up'].join(',')
+  const rows = open.map(l => [
+    `"${l.name}"`,
+    `"${l.status}"`,
+    `"${l.temperature}"`,
+    l.budget || 0,
+    `"${l.location || ''}"`,
+    `"${l.nextFollowUpAt ? new Date(l.nextFollowUpAt).toLocaleDateString('en-IN') : 'Not set'}"`,
+  ].join(','))
+  return [headers, ...rows].join('\n')
+}
+
+function buildSummaryTxt(leads: Lead[], analytics: AnalyticsData | null): string {
+  const total    = leads.length
+  const closed   = leads.filter(l => l.status === 'closed').length
+  const pipeline = leads.reduce((s, l) => s + (l.budget || 0), 0)
+  const convRate = total > 0 ? ((closed / total) * 100).toFixed(1) : '0'
+  const date     = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const stageLines = ['new','contacted','follow-up','site-visit','negotiation','closed','lost']
+    .map(s => {
+      const count = leads.filter(l => l.status === s).length
+      return `  ${s.padEnd(14)} ${count} leads`
+    }).join('\n')
+
+  return `BROKERRA — ANALYTICS REPORT
+Generated: ${date}
+${'='.repeat(40)}
+
+PIPELINE SUMMARY
+Total Leads:       ${total}
+Closed Deals:      ${closed}
+Conversion Rate:   ${convRate}%
+Total Pipeline:    ${formatCurrency(pipeline)}
+
+STAGE BREAKDOWN
+${stageLines}
+
+${'='.repeat(40)}
+Exported from Brokerra AI Real Estate CRM
+brokerra.vercel.app
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function ExportPanel({ leads = [], analytics }: ExportPanelProps) {
+  const [loading, setLoading] = useState<string | null>(null)
+  const [done, setDone]       = useState<string[]>([])
+
+  const run = async (id: string, fn: () => Promise<void> | void) => {
     setLoading(id)
     try {
       await fn()
       setDone(prev => [...prev, id])
       setTimeout(() => setDone(prev => prev.filter(d => d !== id)), 3000)
-    } catch {
+    } catch (err) {
+      console.error(err)
       toast.error('Export failed. Please try again.')
     } finally {
       setLoading(null)
     }
   }
 
-  const EXPORTS: ExportOption[] = [
+  // ── Export handlers — try backend first, fallback to client-side ──────────
+
+  const exportAllLeadsCsv = async () => {
+    try {
+      // Try backend export first
+      const blob = await exportApi.exportLeadsCsv()
+      downloadBlob(blob, `brokerra-leads-${new Date().toISOString().slice(0,10)}.csv`)
+      toast.success('Leads exported to CSV')
+    } catch {
+      // Backend unavailable — build CSV client-side from props
+      if (leads.length === 0) { toast.error('No leads to export'); return }
+      const csv = buildLeadsCsv(leads)
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      downloadBlob(blob, `brokerra-leads-${new Date().toISOString().slice(0,10)}.csv`)
+      toast.success(`Exported ${leads.length} leads to CSV`)
+    }
+  }
+
+  const exportMonthlyReport = async () => {
+    try {
+      const blob = await exportApi.exportMonthlyReport()
+      downloadBlob(blob, `brokerra-report-${new Date().toISOString().slice(0,7)}.pdf`)
+      toast.success('Monthly report downloaded')
+    } catch {
+      // Fallback: text summary
+      const txt = buildSummaryTxt(leads, analytics)
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' })
+      downloadBlob(blob, `brokerra-report-${new Date().toISOString().slice(0,7)}.txt`)
+      toast.success('Report downloaded as text summary')
+    }
+  }
+
+  const exportPipelineCsv = async () => {
+    try {
+      const blob = await exportApi.exportLeadsCsv()
+      downloadBlob(blob, `brokerra-pipeline-${new Date().toISOString().slice(0,10)}.csv`)
+      toast.success('Pipeline exported')
+    } catch {
+      if (leads.length === 0) { toast.error('No pipeline data to export'); return }
+      const csv = buildPipelineCsv(leads)
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      downloadBlob(blob, `brokerra-pipeline-${new Date().toISOString().slice(0,10)}.csv`)
+      const openCount = leads.filter(l => !['closed','lost'].includes(l.status)).length
+      toast.success(`Exported ${openCount} open deals to CSV`)
+    }
+  }
+
+  const EXPORTS = [
     {
       id: 'leads-csv',
       title: 'All Leads (CSV)',
-      description: 'Every lead with status, budget, contact info, and source',
+      description: `Every lead with status, budget, contact info, and source${leads.length > 0 ? ` · ${leads.length} records` : ''}`,
       icon: Table2,
       iconColor: 'text-emerald-400',
       iconBg: 'bg-emerald-500/12 border-emerald-500/20',
-      action: async () => {
-        const blob = await exportApi.exportLeadsCsv()
-        downloadBlob(blob, `brokerra-leads-${new Date().toISOString().slice(0, 10)}.csv`)
-        toast.success('Leads exported to CSV')
-      },
+      action: exportAllLeadsCsv,
     },
     {
       id: 'monthly-pdf',
-      title: 'Monthly Report (PDF)',
-      description: 'Full analytics summary: pipeline value, conversions, broker performance',
+      title: 'Monthly Report',
+      description: 'Analytics summary: pipeline value, conversions, stage breakdown',
       icon: FileText,
       iconColor: 'text-blue-400',
       iconBg: 'bg-blue-500/12 border-blue-500/20',
-      action: async () => {
-        const blob = await exportApi.exportMonthlyReport()
-        downloadBlob(blob, `brokerra-report-${new Date().toISOString().slice(0, 7)}.pdf`)
-        toast.success('Monthly report downloaded')
-      },
+      action: exportMonthlyReport,
     },
     {
       id: 'pipeline-csv',
       title: 'Pipeline Snapshot (CSV)',
-      description: 'Current pipeline with stage, follow-up dates, and deal values',
+      description: 'Open deals with stage, follow-up dates, and deal values',
       icon: BarChart3,
       iconColor: 'text-purple-400',
       iconBg: 'bg-purple-500/12 border-purple-500/20',
-      action: async () => {
-        // Reuse leads CSV filtered by non-closed/lost
-        const blob = await exportApi.exportLeadsCsv()
-        downloadBlob(blob, `brokerra-pipeline-${new Date().toISOString().slice(0, 10)}.csv`)
-        toast.success('Pipeline exported')
-      },
+      action: exportPipelineCsv,
     },
   ]
 
@@ -91,9 +196,9 @@ export function ExportPanel() {
 
       <div className="p-4 space-y-3">
         {EXPORTS.map((exp, i) => {
-          const Icon = exp.icon
+          const Icon      = exp.icon
           const isLoading = loading === exp.id
-          const isDone = done.includes(exp.id)
+          const isDone    = done.includes(exp.id)
 
           return (
             <motion.div
