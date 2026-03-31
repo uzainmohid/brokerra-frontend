@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Phone, MessageSquare, Clock, CheckCircle2,
@@ -11,119 +11,110 @@ import { formatRelative, getTemperatureEmoji, formatCurrency } from '@/utils'
 import { Lead } from '@/types'
 import Link from 'next/link'
 
-// Mock follow-up data — in production these come from the API
-const MOCK_FOLLOWUPS = [
-  {
-    id: '1',
-    lead: { id: 'l1', name: 'Rajesh Kumar', phone: '+91 98765 43210', temperature: 'hot' as const },
-    type: 'call' as const,
-    scheduledAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min overdue
-    notes: '3BHK in Bandra — final decision pending',
-    budget: 18500000,
-    isOverdue: true,
-  },
-  {
-    id: '2',
-    lead: { id: 'l2', name: 'Priya Mehta', phone: '+91 87654 32109', temperature: 'hot' as const },
-    type: 'whatsapp' as const,
-    scheduledAt: new Date(Date.now() + 1000 * 60 * 45).toISOString(), // 45 min from now
-    notes: 'Send site visit confirmation and property brochure',
-    budget: 9500000,
-    isOverdue: false,
-  },
-  {
-    id: '3',
-    lead: { id: 'l3', name: 'Amit Shah', phone: '+91 76543 21098', temperature: 'warm' as const },
-    type: 'call' as const,
-    scheduledAt: new Date(Date.now() + 1000 * 60 * 120).toISOString(), // 2 hrs from now
-    notes: 'Check interest in new Powai listings',
-    budget: 12200000,
-    isOverdue: false,
-  },
-  {
-    id: '4',
-    lead: { id: 'l4', name: 'Sunita Rao', phone: '+91 65432 10987', temperature: 'warm' as const },
-    type: 'whatsapp' as const,
-    scheduledAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hrs overdue
-    notes: 'Negotiate on 2BHK Andheri price point',
-    budget: 7800000,
-    isOverdue: true,
-  },
-  {
-    id: '5',
-    lead: { id: 'l5', name: 'Vikram Nair', phone: '+91 54321 09876', temperature: 'cold' as const },
-    type: 'call' as const,
-    scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), // 4 hrs from now
-    notes: 'Re-engage after 2 weeks of silence',
-    budget: 5500000,
-    isOverdue: false,
-  },
-]
-
+// ── Type config for the contact icon per status ───────────────────────────────
 const TYPE_CONFIG = {
-  call: { icon: Phone, label: 'Call', color: 'text-blue-400', bg: 'bg-blue-500/12' },
-  whatsapp: { icon: MessageSquare, label: 'WhatsApp', color: 'text-green-400', bg: 'bg-green-500/12' },
-  email: { icon: Calendar, label: 'Email', color: 'text-purple-400', bg: 'bg-purple-500/12' },
+  call:         { icon: Phone,        label: 'Call',       color: 'text-blue-400',   bg: 'bg-blue-500/12' },
+  whatsapp:     { icon: MessageSquare,label: 'WhatsApp',   color: 'text-green-400',  bg: 'bg-green-500/12' },
+  email:        { icon: Calendar,     label: 'Email',      color: 'text-purple-400', bg: 'bg-purple-500/12' },
   'site-visit': { icon: ChevronRight, label: 'Site Visit', color: 'text-orange-400', bg: 'bg-orange-500/12' },
-  meeting: { icon: Calendar, label: 'Meeting', color: 'text-pink-400', bg: 'bg-pink-500/12' },
+  meeting:      { icon: Calendar,     label: 'Meeting',    color: 'text-pink-400',   bg: 'bg-pink-500/12' },
 }
 
-interface FollowUpItemProps {
-  item: typeof MOCK_FOLLOWUPS[0]
+// ── Infer contact type from lead source ───────────────────────────────────────
+function inferType(source: string): keyof typeof TYPE_CONFIG {
+  if (source === 'whatsapp') return 'whatsapp'
+  if (source === 'website' || source === 'facebook' || source === 'instagram') return 'email'
+  if (source === 'walk-in') return 'site-visit'
+  return 'call'
+}
+
+// ── Map a Lead with nextFollowUpAt into a display item ────────────────────────
+interface FollowUpItem {
+  id: string
+  lead: { id: string; name: string; phone: string; temperature: Lead['temperature'] }
+  type: keyof typeof TYPE_CONFIG
+  scheduledAt: string
+  notes: string
+  budget?: number
+  isOverdue: boolean
+}
+
+function leadToFollowUpItem(lead: Lead): FollowUpItem {
+  const scheduledAt = lead.nextFollowUpAt!
+  const isOverdue   = new Date(scheduledAt) < new Date()
+  return {
+    id:          lead.id,
+    lead:        { id: lead.id, name: lead.name, phone: lead.phone, temperature: lead.temperature },
+    type:        inferType(lead.source),
+    scheduledAt,
+    notes:       lead.noteText || lead.notes || '',
+    budget:      lead.budget,
+    isOverdue,
+  }
+}
+
+// ── Row component ─────────────────────────────────────────────────────────────
+interface FollowUpRowProps {
+  item: FollowUpItem
   onComplete: (id: string) => void
 }
 
-function FollowUpItem({ item, onComplete }: FollowUpItemProps) {
+function FollowUpRow({ item, onComplete }: FollowUpRowProps) {
   const typeConf = TYPE_CONFIG[item.type] || TYPE_CONFIG.call
   const TypeIcon = typeConf.icon
+  const scheduled = new Date(item.scheduledAt)
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
-      transition={{ duration: 0.25 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0, padding: 0 }}
+      transition={{ duration: 0.22 }}
       className={cn(
-        'group flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-200 cursor-pointer',
+        'group relative flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-200 cursor-pointer',
         item.isOverdue
-          ? 'bg-red-500/5 border-red-500/15 hover:border-red-500/30'
+          ? 'bg-red-500/5 border-red-500/18 hover:border-red-500/30'
           : 'bg-white/3 border-white/6 hover:border-white/12 hover:bg-white/5'
       )}
     >
-      {/* Type icon */}
+      {/* Contact type icon */}
       <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5', typeConf.bg)}>
         <TypeIcon className={cn('w-3.5 h-3.5', typeConf.color)} />
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <Link href={`/leads/${item.lead.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-semibold text-white/90 truncate">{item.lead.name}</span>
-          <span className="text-xs">{getTemperatureEmoji(item.lead.temperature)}</span>
+          <span className="text-sm font-semibold text-white/90">
+            {item.lead.name} {getTemperatureEmoji(item.lead.temperature)}
+          </span>
           {item.isOverdue && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400 bg-red-500/12 border border-red-500/20 px-1.5 py-0.5 rounded-full ml-auto flex-shrink-0">
-              <AlertTriangle className="w-2.5 h-2.5" />
-              OVERDUE
+            <span className="flex items-center gap-0.5 text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full">
+              <AlertTriangle className="w-2.5 h-2.5" /> OVERDUE
             </span>
           )}
         </div>
 
-        <p className="text-xs text-white/40 truncate mb-1.5">{item.notes}</p>
+        {item.notes && (
+          <p className="text-xs text-white/45 leading-relaxed mb-1.5 truncate">{item.notes}</p>
+        )}
 
         <div className="flex items-center gap-3 text-[11px] text-white/30">
           <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
+            <Clock className="w-2.5 h-2.5" />
             {formatRelative(item.scheduledAt)}
           </span>
-          <span>{formatCurrency(item.budget)}</span>
-          <span className={typeConf.color}>{typeConf.label}</span>
+          {item.budget && (
+            <span className="text-white/40 font-medium">{formatCurrency(item.budget)}</span>
+          )}
+          <span className={cn('font-semibold', typeConf.color)}>{typeConf.label}</span>
         </div>
-      </div>
+      </Link>
 
       {/* Complete button */}
       <button
-        onClick={(e) => { e.stopPropagation(); onComplete(item.id) }}
+        onClick={e => { e.stopPropagation(); onComplete(item.id) }}
         className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-emerald-500/15 border border-white/8 hover:border-emerald-500/30 flex items-center justify-center text-white/25 hover:text-emerald-400 transition-all duration-200 opacity-0 group-hover:opacity-100"
         title="Mark as done"
       >
@@ -133,14 +124,44 @@ function FollowUpItem({ item, onComplete }: FollowUpItemProps) {
   )
 }
 
-export function TodayFollowUps() {
-  const [items, setItems] = useState(MOCK_FOLLOWUPS)
+// ── Main component ────────────────────────────────────────────────────────────
+interface TodayFollowUpsProps {
+  leads?: Lead[]
+}
+
+export function TodayFollowUps({ leads = [] }: TodayFollowUpsProps) {
+  const [dismissed, setDismissed] = useState<string[]>([])
+
+  // Build follow-up items from real leads:
+  // Include leads where nextFollowUpAt is today OR overdue (not closed/lost)
+  const allItems = useMemo<FollowUpItem[]>(() => {
+    const now      = new Date()
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+
+    return leads
+      .filter(l =>
+        l.nextFollowUpAt &&
+        new Date(l.nextFollowUpAt) < tomorrow &&
+        !['closed', 'lost'].includes(l.status)
+      )
+      .sort((a, b) => {
+        // Overdue first, then by scheduled time ascending
+        const aOver = new Date(a.nextFollowUpAt!) < now ? 0 : 1
+        const bOver = new Date(b.nextFollowUpAt!) < now ? 0 : 1
+        if (aOver !== bOver) return aOver - bOver
+        return new Date(a.nextFollowUpAt!).getTime() - new Date(b.nextFollowUpAt!).getTime()
+      })
+      .map(leadToFollowUpItem)
+  }, [leads])
+
+  const items        = allItems.filter(i => !dismissed.includes(i.id))
+  const totalCount   = allItems.length
+  const doneCount    = dismissed.length
+  const overdueCount = items.filter(i => i.isOverdue).length
 
   const handleComplete = (id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id))
+    setDismissed(prev => [...prev, id])
   }
-
-  const overdueCount = items.filter(i => i.isOverdue).length
 
   return (
     <div className="bg-[rgba(15,26,53,0.6)] backdrop-blur-xl border border-white/8 rounded-2xl overflow-hidden flex flex-col">
@@ -149,7 +170,7 @@ export function TodayFollowUps() {
         <div>
           <h3 className="text-base font-semibold text-white">Today's Follow-ups</h3>
           <p className="text-xs text-white/35 mt-0.5">
-            {items.length} scheduled
+            {items.length > 0 ? `${items.length} scheduled` : 'No follow-ups scheduled today'}
             {overdueCount > 0 && (
               <span className="text-red-400 ml-1">· {overdueCount} overdue</span>
             )}
@@ -163,7 +184,7 @@ export function TodayFollowUps() {
         </Link>
       </div>
 
-      {/* Follow-up list */}
+      {/* List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[420px] no-scrollbar">
         <AnimatePresence>
           {items.length === 0 ? (
@@ -173,28 +194,34 @@ export function TodayFollowUps() {
               className="flex flex-col items-center justify-center py-10 text-center"
             >
               <CheckCircle2 className="w-10 h-10 text-emerald-500/30 mb-3" />
-              <p className="text-sm font-medium text-white/40">All caught up!</p>
-              <p className="text-xs text-white/25 mt-1">No more follow-ups for today.</p>
+              <p className="text-sm font-medium text-white/40">
+                {doneCount > 0 ? 'All caught up!' : 'No follow-ups for today'}
+              </p>
+              <p className="text-xs text-white/25 mt-1">
+                {doneCount > 0
+                  ? `${doneCount} completed today`
+                  : 'Schedule follow-ups on your leads to see them here'}
+              </p>
             </motion.div>
           ) : (
             items.map(item => (
-              <FollowUpItem key={item.id} item={item} onComplete={handleComplete} />
+              <FollowUpRow key={item.id} item={item} onComplete={handleComplete} />
             ))
           )}
         </AnimatePresence>
       </div>
 
-      {/* Footer */}
-      {items.length > 0 && (
+      {/* Footer progress */}
+      {totalCount > 0 && (
         <div className="px-5 py-3 border-t border-white/6">
           <div className="flex items-center gap-2 text-xs text-white/30">
             <div className="flex-1 h-1.5 bg-white/6 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
-                style={{ width: `${((MOCK_FOLLOWUPS.length - items.length) / MOCK_FOLLOWUPS.length) * 100}%` }}
+                style={{ width: `${(doneCount / totalCount) * 100}%` }}
               />
             </div>
-            <span>{MOCK_FOLLOWUPS.length - items.length}/{MOCK_FOLLOWUPS.length} completed today</span>
+            <span>{doneCount}/{totalCount} completed today</span>
           </div>
         </div>
       )}

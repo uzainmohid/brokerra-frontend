@@ -2,12 +2,11 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, ArrowUpRight } from 'lucide-react'
+import { ChevronRight, ArrowUpRight, Users } from 'lucide-react'
 import Link from 'next/link'
 import { Lead } from '@/types'
 import { StatusBadge, TempBadge } from '@/components/shared/status-badge'
 import { formatRelative, formatCurrency, getInitials } from '@/utils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const AVATAR_COLORS = [
@@ -18,50 +17,12 @@ const AVATAR_COLORS = [
   'from-red-600 to-rose-500',
 ]
 
-const MOCK_LEADS: Lead[] = [
-  {
-    id: 'l1', name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@gmail.com',
-    status: 'negotiation', temperature: 'hot', source: 'referral',
-    budget: 18500000, location: 'Bandra, Mumbai',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: 'l2', name: 'Priya Mehta', phone: '+91 87654 32109', email: 'priya.m@email.com',
-    status: 'site-visit', temperature: 'hot', source: 'instagram',
-    budget: 9500000, location: 'Powai, Mumbai',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-  },
-  {
-    id: 'l3', name: 'Amit Shah', phone: '+91 76543 21098',
-    status: 'follow-up', temperature: 'warm', source: 'property-portal',
-    budget: 12200000, location: 'Andheri West, Mumbai',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-  },
-  {
-    id: 'l4', name: 'Kavita Rao', phone: '+91 65432 10987',
-    status: 'contacted', temperature: 'warm', source: 'whatsapp',
-    budget: 7200000, location: 'Thane West',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-  },
-  {
-    id: 'l5', name: 'Mohammed Riyaz', phone: '+91 54321 09876',
-    status: 'new', temperature: 'cold', source: 'cold-call',
-    budget: 5500000, location: 'Navi Mumbai',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-  },
-]
-
 interface RecentLeadsProps {
   leads?: Lead[]
   isLoading?: boolean
 }
 
-export function RecentLeads({ leads = MOCK_LEADS, isLoading }: RecentLeadsProps) {
+export function RecentLeads({ leads = [], isLoading }: RecentLeadsProps) {
   return (
     <div className="bg-[rgba(15,26,53,0.6)] backdrop-blur-xl border border-white/8 rounded-2xl overflow-hidden">
       {/* Header */}
@@ -91,77 +52,87 @@ export function RecentLeads({ leads = MOCK_LEADS, isLoading }: RecentLeadsProps)
             </tr>
           </thead>
           <tbody className="divide-y divide-white/3">
-            {isLoading
-              ? [...Array(5)].map((_, i) => (
-                  <tr key={i}>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
-                        <div className="space-y-1.5">
-                          <Skeleton className="h-3 w-28" />
-                          <Skeleton className="h-2.5 w-20" />
-                        </div>
+            {isLoading ? (
+              [...Array(5)].map((_, i) => (
+                <tr key={i}>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-2.5 w-20" />
                       </div>
-                    </td>
-                    <td className="px-3 py-3.5 hidden md:table-cell"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                    <td className="px-3 py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-16" /></td>
-                    <td className="px-3 py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-20" /></td>
-                    <td className="px-3 py-3.5" />
-                  </tr>
-                ))
-              : leads.map((lead, i) => (
-                  <motion.tr
-                    key={lead.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="group hover:bg-white/2 transition-colors duration-150 cursor-pointer"
-                  >
-                    {/* Lead info */}
-                    <td className="px-5 py-3.5">
-                      <Link href={`/leads/${lead.id}`} className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-full bg-gradient-to-br ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}
-                        >
-                          {getInitials(lead.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-white/90 truncate">{lead.name}</div>
-                          <div className="text-xs text-white/35 truncate">{lead.location || lead.phone}</div>
-                        </div>
-                      </Link>
-                    </td>
-
-                    {/* Status + temp */}
-                    <td className="px-3 py-3.5 hidden md:table-cell">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <StatusBadge status={lead.status} />
-                        <TempBadge temperature={lead.temperature} />
+                    </div>
+                  </td>
+                  <td className="px-3 py-3.5 hidden md:table-cell"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                  <td className="px-3 py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-16" /></td>
+                  <td className="px-3 py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-20" /></td>
+                  <td className="px-3 py-3.5" />
+                </tr>
+              ))
+            ) : leads.length === 0 ? (
+              // Empty state — no fake data
+              <tr>
+                <td colSpan={5} className="px-5 py-14 text-center">
+                  <Users className="w-8 h-8 text-white/15 mx-auto mb-3" />
+                  <p className="text-sm text-white/30">No leads yet</p>
+                  <p className="text-xs text-white/18 mt-1">
+                    <Link href="/leads" className="text-emerald-400 hover:text-emerald-300">
+                      Add your first lead →
+                    </Link>
+                  </p>
+                </td>
+              </tr>
+            ) : (
+              leads.map((lead, i) => (
+                <motion.tr
+                  key={lead.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="group hover:bg-white/2 transition-colors duration-150 cursor-pointer"
+                >
+                  <td className="px-5 py-3.5">
+                    <Link href={`/leads/${lead.id}`} className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-full bg-gradient-to-br ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}
+                      >
+                        {getInitials(lead.name)}
                       </div>
-                    </td>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-white/90 truncate">{lead.name}</div>
+                        <div className="text-xs text-white/35 truncate">{lead.location || lead.phone}</div>
+                      </div>
+                    </Link>
+                  </td>
 
-                    {/* Budget */}
-                    <td className="px-3 py-3.5 hidden lg:table-cell">
-                      {lead.budget ? (
-                        <span className="text-sm font-medium text-white/70">{formatCurrency(lead.budget)}</span>
-                      ) : (
-                        <span className="text-sm text-white/25">—</span>
-                      )}
-                    </td>
+                  <td className="px-3 py-3.5 hidden md:table-cell">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <StatusBadge status={lead.status} />
+                      <TempBadge temperature={lead.temperature} />
+                    </div>
+                  </td>
 
-                    {/* Last activity */}
-                    <td className="px-3 py-3.5 hidden lg:table-cell">
-                      <span className="text-xs text-white/35">{formatRelative(lead.updatedAt)}</span>
-                    </td>
+                  <td className="px-3 py-3.5 hidden lg:table-cell">
+                    {lead.budget ? (
+                      <span className="text-sm font-medium text-white/70">{formatCurrency(lead.budget)}</span>
+                    ) : (
+                      <span className="text-sm text-white/25">—</span>
+                    )}
+                  </td>
 
-                    {/* Arrow */}
-                    <td className="px-3 py-3.5">
-                      <Link href={`/leads/${lead.id}`}>
-                        <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
-                      </Link>
-                    </td>
-                  </motion.tr>
-                ))}
+                  <td className="px-3 py-3.5 hidden lg:table-cell">
+                    <span className="text-xs text-white/35">{formatRelative(lead.updatedAt)}</span>
+                  </td>
+
+                  <td className="px-3 py-3.5">
+                    <Link href={`/leads/${lead.id}`}>
+                      <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
+                    </Link>
+                  </td>
+                </motion.tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
