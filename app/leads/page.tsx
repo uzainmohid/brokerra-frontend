@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, Download, RefreshCw } from 'lucide-react'
 import { Header } from '@/components/layout/header'
@@ -13,7 +13,7 @@ import { LeadFormModal } from '@/components/leads/lead-form-modal'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useLeads } from '@/hooks/use-leads'
 import { Lead } from '@/types'
-import { exportApi } from '@/lib/api'
+import { exportApi, leadsApi } from '@/lib/api'
 import { downloadBlob } from '@/utils'
 import { toast } from 'sonner'
 
@@ -30,10 +30,37 @@ export default function LeadsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
+  // ── Real stage counts — fetched separately from the paginated table ─────
+  // The table uses pagination (20/page) so counts must come from a full fetch
+  const [stageCounts, setStageCounts] = useState<Record<string, number>>({})
+  const [countsLoading, setCountsLoading] = useState(true)
+
+  const fetchStageCounts = useCallback(async () => {
+    try {
+      // Fetch all leads (limit 500) — only need status field for counting
+      const res = await leadsApi.getLeads({ limit: 500 })
+      const allLeads = Array.isArray(res) ? res : (res.data ?? [])
+      const counts: Record<string, number> = {}
+      allLeads.forEach(lead => {
+        const s = lead.status || 'new'
+        counts[s] = (counts[s] || 0) + 1
+      })
+      setStageCounts(counts)
+    } catch {
+      // Counts stay at 0 — non-critical, don't block the page
+    } finally {
+      setCountsLoading(false)
+    }
+  }, [])
+
+  // Fetch counts on mount and whenever a lead is added/deleted/updated
+  useEffect(() => { fetchStageCounts() }, [fetchStageCounts])
+
   const handleDelete = async () => {
     if (!deleteId) return
     setDeleteLoading(true)
     await deleteLead(deleteId)
+    fetchStageCounts()   // keep stage counts in sync
     setDeleteLoading(false)
     setDeleteId(null)
   }
@@ -53,6 +80,7 @@ export default function LeadsPage() {
 
   const handleLeadSuccess = (lead: Lead) => {
     refetch()
+    fetchStageCounts()   // keep stage counts in sync
     setEditLead(null)
   }
 
@@ -103,20 +131,22 @@ export default function LeadsPage() {
             className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2"
           >
             {[
-              { label: 'New', count: 48, color: 'bg-blue-500/15 border-blue-500/20 text-blue-400' },
-              { label: 'Contacted', count: 62, color: 'bg-purple-500/15 border-purple-500/20 text-purple-400' },
-              { label: 'Follow Up', count: 34, color: 'bg-amber-500/15 border-amber-500/20 text-amber-400' },
-              { label: 'Site Visit', count: 28, color: 'bg-orange-500/15 border-orange-500/20 text-orange-400' },
-              { label: 'Negotiation', count: 19, color: 'bg-pink-500/15 border-pink-500/20 text-pink-400' },
-              { label: 'Closed', count: 34, color: 'bg-emerald-500/15 border-emerald-500/20 text-emerald-400' },
-              { label: 'Lost', count: 59, color: 'bg-gray-500/15 border-gray-500/20 text-gray-400' },
+              { label: 'New',         key: 'new',         color: 'bg-blue-500/15 border-blue-500/20 text-blue-400' },
+              { label: 'Contacted',   key: 'contacted',   color: 'bg-purple-500/15 border-purple-500/20 text-purple-400' },
+              { label: 'Follow Up',   key: 'follow-up',   color: 'bg-amber-500/15 border-amber-500/20 text-amber-400' },
+              { label: 'Site Visit',  key: 'site-visit',  color: 'bg-orange-500/15 border-orange-500/20 text-orange-400' },
+              { label: 'Negotiation', key: 'negotiation', color: 'bg-pink-500/15 border-pink-500/20 text-pink-400' },
+              { label: 'Closed',      key: 'closed',      color: 'bg-emerald-500/15 border-emerald-500/20 text-emerald-400' },
+              { label: 'Lost',        key: 'lost',        color: 'bg-gray-500/15 border-gray-500/20 text-gray-400' },
             ].map((stage) => (
               <button
-                key={stage.label}
-                onClick={() => updateFilters({ status: stage.label.toLowerCase().replace(' ', '-') as any })}
+                key={stage.key}
+                onClick={() => updateFilters({ status: stage.key as any })}
                 className={`flex flex-col items-center py-2.5 px-2 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-105 ${stage.color}`}
               >
-                <span className="text-xl font-bold">{stage.count}</span>
+                <span className="text-xl font-bold">
+                  {countsLoading ? '—' : (stageCounts[stage.key] ?? 0)}
+                </span>
                 <span className="text-[10px] font-medium opacity-80 mt-0.5">{stage.label}</span>
               </button>
             ))}
