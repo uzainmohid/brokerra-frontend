@@ -22,6 +22,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { ActivityTimeline } from '@/components/leads/activity-timeline'
 import { NotesSection } from '@/components/leads/notes-section'
 import { AiSummaryCard } from '@/components/leads/ai-summary-card'
+import { FollowUpComposer } from '@/components/leads/follow-up-composer'
 import { leadsApi } from '@/lib/api'
 import { Lead, LeadWithDetails } from '@/types'
 import { formatCurrency, formatDate, formatRelative, getInitials } from '@/utils'
@@ -298,6 +299,7 @@ export default function LeadDetailPage() {
                 <TabsList className="mb-4">
                   <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
                   <TabsTrigger value="notes">Notes</TabsTrigger>
+                  <TabsTrigger value="compose">✨ AI Compose</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="timeline">
@@ -308,6 +310,10 @@ export default function LeadDetailPage() {
 
                 <TabsContent value="notes">
                   <NotesSection leadId={id} notes={Array.isArray(lead.notes) && lead.notes.length ? lead.notes : undefined} />
+                </TabsContent>
+
+                <TabsContent value="compose">
+                  <FollowUpComposer leadId={id} leadPhone={lead.phone} />
                 </TabsContent>
               </Tabs>
             </motion.div>
