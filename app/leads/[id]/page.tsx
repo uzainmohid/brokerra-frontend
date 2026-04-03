@@ -295,11 +295,20 @@ export default function LeadDetailPage() {
               transition={{ delay: 0.15 }}
               className="lg:col-span-2"
             >
-              <Tabs defaultValue="timeline">
+              <Tabs defaultValue="compose">
                 <TabsList className="mb-4">
                   <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
                   <TabsTrigger value="notes">Notes</TabsTrigger>
-                  <TabsTrigger value="compose">✨ AI Compose</TabsTrigger>
+                  <TabsTrigger
+                    value="compose"
+                    className="relative data-[state=active]:text-emerald-400 data-[state=active]:bg-emerald-500/10 data-[state=active]:border-emerald-500/25"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-emerald-400">✨</span>
+                      <span>AI Compose</span>
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                    </span>
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="timeline">
@@ -313,7 +322,14 @@ export default function LeadDetailPage() {
                 </TabsContent>
 
                 <TabsContent value="compose">
-                  <FollowUpComposer leadId={id} leadPhone={lead.phone} />
+                  <FollowUpComposer
+                    leadId={id}
+                    leadPhone={lead.phone}
+                    leadBudget={lead.budget}
+                    leadLocation={lead.location}
+                    leadStatus={lead.status}
+                    leadTemperature={lead.temperature}
+                  />
                 </TabsContent>
               </Tabs>
             </motion.div>
