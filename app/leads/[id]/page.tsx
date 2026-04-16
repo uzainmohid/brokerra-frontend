@@ -56,17 +56,17 @@ export default function LeadDetailPage() {
 
   const [lead,          setLead]          = useState<LeadWithDetails | null>(null)
   const [loading,       setLoading]       = useState(true)
-  const [error,         setError]         = useState<string | null>(null)
+  const [pageError,     setPageError]     = useState<string | null>(null)
   const [editOpen,      setEditOpen]      = useState(false)
   const [deleteOpen,    setDeleteOpen]    = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    setError(null)
+    setPageError(null)
     leadsApi.getLead(id)
       .then(setLead)
-      .catch(() => setError('Failed to load lead. Please check your connection and try again.'))
+      .catch(() => setPageError('Failed to load lead. Please check your connection and try again.'))
       .finally(() => setLoading(false))
   }, [id])
 
@@ -83,8 +83,8 @@ export default function LeadDetailPage() {
     }
   }
 
-  // LeadFormModal.onSuccess returns Lead (notes: string | undefined).
-  // We preserve the LeadNote[] array already in state and update all other fields.
+  // LeadFormModal.onSuccess returns Lead where notes is string|undefined.
+  // We keep the existing LeadNote[] array and update all other scalar fields.
   const handleEditSuccess = (updated: Lead) => {
     if (!lead) return
     setLead({ ...lead, ...updated, notes: lead.notes })
@@ -104,17 +104,18 @@ export default function LeadDetailPage() {
               <Skeleton className="h-48 rounded-2xl" />
             </div>
           </div>
+          <Skeleton className="h-48 w-full rounded-2xl" />
         </div>
       </PageTransition>
     )
   }
 
-  if (error || !lead) {
+  if (pageError || !lead) {
     return (
       <PageTransition className="flex flex-col flex-1 overflow-hidden">
         <Header title="Lead Details" />
-        <div className="flex flex-col items-center justify-center flex-1 gap-4">
-          <p className="text-white/40 text-sm">{error ?? 'Lead not found.'}</p>
+        <div className="flex flex-col items-center justify-center flex-1 gap-4 px-8">
+          <p className="text-white/40 text-sm text-center">{pageError ?? 'Lead not found.'}</p>
           <Link href="/leads">
             <Button variant="outline" size="sm" className="gap-1.5">
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -177,35 +178,26 @@ export default function LeadDetailPage() {
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center gap-2">
                 <a href={`tel:${lead.phone}`}>
                   <Button variant="outline" size="sm" className="gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-blue-400" />
-                    Call
+                    <Phone className="w-3.5 h-3.5 text-blue-400" />Call
                   </Button>
                 </a>
-                <a
-                  href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                   <Button variant="outline" size="sm" className="gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-green-400" />
-                    WhatsApp
+                    <MessageSquare className="w-3.5 h-3.5 text-green-400" />WhatsApp
                   </Button>
                 </a>
                 {lead.email && (
                   <a href={`mailto:${lead.email}`}>
                     <Button variant="outline" size="sm" className="gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-purple-400" />
-                      Email
+                      <Mail className="w-3.5 h-3.5 text-purple-400" />Email
                     </Button>
                   </a>
                 )}
               </div>
             </div>
-
             <div className="mt-5 pt-5 border-t border-white/6 grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { label: 'Budget',      value: lead.budget ? formatCurrency(lead.budget) : '—', color: 'text-emerald-400' },
@@ -223,7 +215,6 @@ export default function LeadDetailPage() {
 
           {/* Two column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
             {/* Left */}
             <motion.div
               initial={{ opacity: 0, x: -14 }}
@@ -235,42 +226,28 @@ export default function LeadDetailPage() {
                 <div className="py-3 border-b border-white/5">
                   <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Contact Details</h3>
                 </div>
-                <InfoRow
-                  icon={Phone}
-                  label="Phone"
-                  value={
-                    <a href={`tel:${lead.phone}`} className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
-                      {lead.phone}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  }
-                />
+                <InfoRow icon={Phone} label="Phone" value={
+                  <a href={`tel:${lead.phone}`} className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                    {lead.phone}<ExternalLink className="w-3 h-3" />
+                  </a>
+                } />
                 {lead.email && (
-                  <InfoRow
-                    icon={Mail}
-                    label="Email"
-                    value={
-                      <a href={`mailto:${lead.email}`} className="text-emerald-400 hover:text-emerald-300 truncate">
-                        {lead.email}
-                      </a>
-                    }
-                  />
+                  <InfoRow icon={Mail} label="Email" value={
+                    <a href={`mailto:${lead.email}`} className="text-emerald-400 hover:text-emerald-300 truncate">{lead.email}</a>
+                  } />
                 )}
                 <InfoRow icon={MapPin}      label="Location"      value={lead.location ?? '—'} />
                 <InfoRow icon={IndianRupee} label="Budget"        value={lead.budget ? formatCurrency(lead.budget) : '—'} />
                 <InfoRow icon={Tag}         label="Property Type" value={lead.propertyType ?? '—'} />
                 {lead.nextFollowUpAt && (
-                  <InfoRow
-                    icon={Calendar}
-                    label="Next Follow-up"
-                    value={<span className="text-amber-400">{formatDate(lead.nextFollowUpAt)}</span>}
-                  />
+                  <InfoRow icon={Calendar} label="Next Follow-up" value={
+                    <span className="text-amber-400">{formatDate(lead.nextFollowUpAt)}</span>
+                  } />
                 )}
                 {lead.lastContactedAt && (
                   <InfoRow icon={Clock} label="Last Contacted" value={formatRelative(lead.lastContactedAt)} />
                 )}
               </div>
-
               <AiSummaryCard leadId={id} existingSummary={lead.aiSummary} />
             </motion.div>
 
@@ -286,24 +263,19 @@ export default function LeadDetailPage() {
                   <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
                   <TabsTrigger value="notes">Notes</TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="timeline">
                   <div className="bg-[rgba(15,26,53,0.6)] backdrop-blur-xl border border-white/8 rounded-2xl p-5">
                     <ActivityTimeline activities={lead.activities?.length ? lead.activities : undefined} />
                   </div>
                 </TabsContent>
-
                 <TabsContent value="notes">
-                  <NotesSection
-                    leadId={id}
-                    notes={lead.notes?.length ? lead.notes : undefined}
-                  />
+                  <NotesSection leadId={id} notes={lead.notes?.length ? lead.notes : undefined} />
                 </TabsContent>
               </Tabs>
             </motion.div>
           </div>
 
-          {/* AI Follow-Up Composer — always visible, full width */}
+          {/* AI Follow-Up Composer — full width, always visible */}
           <motion.div
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
@@ -329,7 +301,6 @@ export default function LeadDetailPage() {
           onSuccess={handleEditSuccess}
         />
       )}
-
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
