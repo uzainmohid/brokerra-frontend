@@ -13,48 +13,22 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Zap,
   Bell,
-  HelpCircle,
   Brain,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { BrokerraIcon } from '@/components/shared/brokerra-logo'
 import { useAuth } from '@/hooks/use-auth'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { getInitials } from '@/utils'
 
 const NAV_ITEMS = [
-  {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    href: '/leads',
-    label: 'Leads',
-    icon: Users,
-  },
-  {
-    href: '/pipeline',
-    label: 'Pipeline',
-    icon: GitBranch,
-  },
-  {
-    href: '/analytics',
-    label: 'Analytics',
-    icon: BarChart3,
-  },
-  {
-    href: '/ai-agent',
-    label: 'AI Agent',
-    icon: Brain,
-    highlight: true,
-  },
-  {
-    href: '/settings',
-    label: 'Settings',
-    icon: Settings,
-  },
+  { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/leads',        label: 'Leads',        icon: Users           },
+  { href: '/pipeline',     label: 'Pipeline',     icon: GitBranch       },
+  { href: '/analytics',    label: 'Analytics',    icon: BarChart3       },
+  { href: '/ai-composer',  label: 'AI Composer',  icon: Brain,  badge: 'AI' },
+  { href: '/settings',     label: 'Settings',     icon: Settings        },
 ]
 
 interface SidebarProps {
@@ -63,7 +37,7 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
-  const pathname = usePathname()
+  const pathname  = usePathname()
   const { user, logout } = useAuth()
 
   return (
@@ -75,15 +49,16 @@ export function Sidebar({ className }: SidebarProps) {
         'bg-[rgba(8,15,32,0.98)] backdrop-blur-xl',
         'border-r border-white/6',
         'overflow-hidden flex-shrink-0',
-        className
+        className,
       )}
     >
-      {/* Subtle grid pattern */}
       <div className="absolute inset-0 dot-grid opacity-30 pointer-events-none" />
 
       {/* Logo */}
       <div className="relative flex items-center gap-3 px-4 py-5 border-b border-white/6">
-        <BrokerraIcon size={36} />
+        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-[0_4px_15px_rgba(16,185,129,0.4)]">
+          <Zap className="w-5 h-5 text-white" fill="currentColor" />
+        </div>
         <AnimatePresence>
           {!collapsed && (
             <motion.div
@@ -105,11 +80,10 @@ export function Sidebar({ className }: SidebarProps) {
         onClick={() => setCollapsed(!collapsed)}
         className="absolute top-5 -right-3 z-10 w-6 h-6 rounded-full bg-navy-700 border border-white/15 flex items-center justify-center text-white/50 hover:text-white hover:border-emerald-500/40 transition-all duration-200 shadow-lg"
       >
-        {collapsed ? (
-          <ChevronRight className="w-3.5 h-3.5" />
-        ) : (
-          <ChevronLeft className="w-3.5 h-3.5" />
-        )}
+        {collapsed
+          ? <ChevronRight className="w-3.5 h-3.5" />
+          : <ChevronLeft  className="w-3.5 h-3.5" />
+        }
       </button>
 
       {/* Navigation */}
@@ -119,9 +93,11 @@ export function Sidebar({ className }: SidebarProps) {
             Main Menu
           </p>
         )}
+
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href)
-          const Icon = item.icon
+          const Icon     = item.icon
+          const isAI     = item.href === '/ai-composer'
 
           return (
             <Link key={item.href} href={item.href}>
@@ -130,17 +106,24 @@ export function Sidebar({ className }: SidebarProps) {
                 whileTap={{ scale: 0.97 }}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer',
-                  'text-sm font-medium group',
+                  'text-sm font-medium group relative',
                   isActive
-                    ? 'bg-emerald-500/12 text-emerald-400 border border-emerald-500/20'
-                    : 'text-white/50 hover:text-white hover:bg-white/5 border border-transparent'
+                    ? isAI
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-[0_0_20px_rgba(16,185,129,0.08)]'
+                      : 'bg-emerald-500/12 text-emerald-400 border border-emerald-500/20'
+                    : isAI
+                    ? 'text-emerald-400/70 hover:text-emerald-400 hover:bg-emerald-500/8 border border-emerald-500/10 hover:border-emerald-500/20'
+                    : 'text-white/50 hover:text-white hover:bg-white/5 border border-transparent',
                 )}
               >
                 <Icon
                   className={cn(
                     'flex-shrink-0 transition-colors',
-                    collapsed ? 'w-5 h-5' : 'w-4.5 h-4.5',
-                    isActive ? 'text-emerald-400' : 'text-white/40 group-hover:text-white/70'
+                    isActive
+                      ? 'text-emerald-400'
+                      : isAI
+                      ? 'text-emerald-400/60 group-hover:text-emerald-400'
+                      : 'text-white/40 group-hover:text-white/70',
                   )}
                   style={{ width: collapsed ? 20 : 18, height: collapsed ? 20 : 18 }}
                 />
@@ -151,21 +134,25 @@ export function Sidebar({ className }: SidebarProps) {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.15 }}
+                      className="flex-1"
                     >
                       {item.label}
                     </motion.span>
                   )}
                 </AnimatePresence>
-                {isActive && !collapsed && (
+
+                {/* AI badge */}
+                {item.badge && !collapsed && (
+                  <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 leading-none">
+                    {item.badge}
+                  </span>
+                )}
+
+                {isActive && !collapsed && !item.badge && (
                   <motion.div
                     layoutId="active-indicator"
                     className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400"
                   />
-                )}
-                {!isActive && !collapsed && (item as { highlight?: boolean }).highlight && (
-                  <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 uppercase tracking-wider">
-                    AI
-                  </span>
                 )}
               </motion.div>
             </Link>
@@ -175,27 +162,21 @@ export function Sidebar({ className }: SidebarProps) {
 
       {/* Bottom section */}
       <div className="relative px-3 pb-4 space-y-1 border-t border-white/6 pt-3">
-        {/* Notifications */}
         <button className={cn(
           'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
           'text-white/50 hover:text-white hover:bg-white/5 transition-all duration-200',
-          'text-sm font-medium'
+          'text-sm font-medium',
         )}>
           <Bell style={{ width: 18, height: 18 }} className="flex-shrink-0 text-white/40" />
           <AnimatePresence>
             {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 Notifications
               </motion.span>
             )}
           </AnimatePresence>
         </button>
 
-        {/* User profile */}
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-all duration-200 cursor-pointer group">
           <Avatar className="flex-shrink-0 w-7 h-7">
             <AvatarFallback className="text-[10px]">
@@ -210,32 +191,25 @@ export function Sidebar({ className }: SidebarProps) {
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <p className="text-sm font-medium text-white/80 truncate">
-                  {user?.name || 'Broker'}
-                </p>
+                <p className="text-sm font-medium text-white/80 truncate">{user?.name || 'Broker'}</p>
                 <p className="text-[11px] text-white/35 truncate">{user?.email}</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Logout */}
         <button
           onClick={logout}
           className={cn(
             'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
             'text-white/40 hover:text-red-400 hover:bg-red-500/8 transition-all duration-200',
-            'text-sm font-medium'
+            'text-sm font-medium',
           )}
         >
           <LogOut style={{ width: 18, height: 18 }} className="flex-shrink-0" />
           <AnimatePresence>
             {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 Log Out
               </motion.span>
             )}
