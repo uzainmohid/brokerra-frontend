@@ -16,6 +16,7 @@ import {
   Zap,
   Bell,
   Brain,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -23,12 +24,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { getInitials } from '@/utils'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/leads',        label: 'Leads',        icon: Users           },
-  { href: '/pipeline',     label: 'Pipeline',     icon: GitBranch       },
-  { href: '/analytics',    label: 'Analytics',    icon: BarChart3       },
-  { href: '/ai-composer',  label: 'AI Composer',  icon: Brain,  badge: 'AI' },
-  { href: '/settings',     label: 'Settings',     icon: Settings        },
+  { href: '/dashboard',    label: 'Dashboard',      icon: LayoutDashboard },
+  { href: '/leads',        label: 'Leads',          icon: Users           },
+  { href: '/analytics',    label: 'Analytics',      icon: BarChart3       },
+  { href: '/ai-agent',     label: 'AI Deal Agent',  icon: Sparkles,  badge: 'AI' },
+  { href: '/ai-composer',  label: 'AI Composer',    icon: Brain,     badge: 'AI' },
+  { href: '/settings',     label: 'Settings',       icon: Settings        },
 ]
 
 interface SidebarProps {
@@ -97,7 +98,7 @@ export function Sidebar({ className }: SidebarProps) {
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href)
           const Icon     = item.icon
-          const isAI     = item.href === '/ai-composer'
+          const isAI     = item.badge === 'AI'
 
           return (
             <Link key={item.href} href={item.href}>
@@ -141,7 +142,6 @@ export function Sidebar({ className }: SidebarProps) {
                   )}
                 </AnimatePresence>
 
-                {/* AI badge */}
                 {item.badge && !collapsed && (
                   <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 leading-none">
                     {item.badge}
