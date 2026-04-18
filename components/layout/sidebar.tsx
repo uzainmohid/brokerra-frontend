@@ -15,8 +15,8 @@ import {
   ChevronRight,
   Zap,
   Bell,
-  Brain,
-  Sparkles,
+  MessageSquareText,
+  Bot,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -27,8 +27,8 @@ const NAV_ITEMS = [
   { href: '/dashboard',    label: 'Dashboard',      icon: LayoutDashboard },
   { href: '/leads',        label: 'Leads',          icon: Users           },
   { href: '/analytics',    label: 'Analytics',      icon: BarChart3       },
-  { href: '/ai-agent',     label: 'AI Deal Agent',  icon: Sparkles,  badge: 'AI' },
-  { href: '/ai-composer',  label: 'AI Composer',    icon: Brain,     badge: 'AI' },
+  { href: '/ai-agent',    label: 'AI Deal Agent', icon: Bot,               badge: 'AI' },
+  { href: '/ai-composer', label: 'AI Composer',   icon: MessageSquareText, badge: 'AI' },
   { href: '/settings',     label: 'Settings',       icon: Settings        },
 ]
 
