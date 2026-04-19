@@ -164,22 +164,13 @@ export const aiAgentApi = {
 // ---- AI Follow-up API ───────────────────────────────────────────────────────────
 export const aiFollowupApi = {
   generate: async (leadId: string) => {
-    const token = localStorage.getItem('brokerra_token')
+    const { data } = await api.post('/api/ai-followup/generate', {
+      leadId,
+    })
 
-    const { data } = await api.post(
-      '/api/ai-followup/generate',
-      { leadId },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
-
-    return data.data
+    return data?.data ?? data
   },
 }
-
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
 export const getToken = (): string | null => {
