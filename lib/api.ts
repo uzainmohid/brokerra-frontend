@@ -161,10 +161,10 @@ export const aiAgentApi = {
   },
 }
 
-// ---- AI Follow-up API ───────────────────────────────────────────────────────────
-export const aiFollowupApi = {
+// ---- AI Composer API ───────────────────────────────────────────────────────────
+export const aicomposerApi = {
   generate: async (leadId: string) => {
-    const { data } = await api.post('/api/ai-followup/generate', {
+    const { data } = await api.post('/api/ai-composer/generate', {
       leadId,
     })
 
