@@ -13,11 +13,11 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Zap,
   Bell,
   MessageSquareText,
   Bot,
 } from 'lucide-react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -56,25 +56,31 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="absolute inset-0 dot-grid opacity-30 pointer-events-none" />
 
       {/* Logo */}
-      <div className="relative flex items-center gap-3 px-4 py-5 border-b border-white/6">
-        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-[0_4px_15px_rgba(16,185,129,0.4)]">
-          <Zap className="w-5 h-5 text-white" fill="currentColor" />
-        </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <span className="text-white font-bold text-lg tracking-tight">
-                Broker<span className="text-emerald-400">ra</span>
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        <div className="relative flex items-center gap-3 px-4 py-5 border-b border-white/6">
+    <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-[0_4px_15px_rgba(16,185,129,0.4)]">
+      <Image
+        src="/brokerra-app-icon.svg"
+        alt="Brokerra"
+        width={20}
+        height={20}
+        className="object-contain"
+      />
+    </div>
+    <AnimatePresence>
+      {!collapsed && (
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          <span className="text-white font-bold text-lg tracking-tight">
+            Broker<span className="text-emerald-400">ra</span>
+          </span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
 
       {/* Collapse toggle */}
       <button
